@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <winsock2.h>
+#pragma warning(disable:4996) 
 #include <iostream>
 int main()
 {
@@ -74,6 +75,7 @@ int main()
 	{
 		printf("recieving successfull \n");
 	}
+	printf("%s", RecvBuffer);
 	
 
 	//close
@@ -104,6 +106,8 @@ int main()
 
 	return 0;
 }
+
+
 
 
 
