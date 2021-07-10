@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <winsock2.h>
 #include <iostream>
+#pragma warning(disable:4996)
 
 int main()
 {
