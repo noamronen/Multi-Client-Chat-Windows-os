@@ -4,157 +4,143 @@
 #include <sys/types.h>
 #include <winsock2.h>
 #include <iostream>
+#include <thread>
+#include<WS2tcpip.h>
+#include<vector>
+#include <fcntl.h>
+#include <mutex>
+using namespace std;
+
 #pragma warning(disable:4996)
 
-int main()
+void RecvAndSend(SOCKET client_socket,SOCKET client_arr[],int numofclients)
 {
-	//local variable
-	WSADATA Winsockdata;
-	int iWsaStartup;
-	int iWsaCleanup;
-
-	//for creating the socket
-	SOCKET server_socket;
-	int iCloseSocket;
-
-	//define the addresses
-	struct sockaddr_in client_address;
-	struct sockaddr_in server_address;
-	int iClient_address = sizeof(client_address);
-
-	//for bind function
-	int iBind;
-
-	//for listen function
-	int iListen;
-
-	//for the accept function
-	SOCKET client_socket;
-
-	//for the send function
-	int iSend;
-	char server_response[256] = "you reached the server";
-	int iServer_response = strlen(server_response) + 1;
-
-	//for Recv function
-	int iRecv;
-	char RecvBuffer[256];
-	int iRecvBuffer = strlen(RecvBuffer) + 1;
-
-	//WSAstartup
-	iWsaStartup = WSAStartup(MAKEWORD(2, 2), &Winsockdata);
-	if (iWsaStartup != 0)
-	{
-		printf("WSAstartup failed \n");
-	}
-	else
-	{
-		printf("WSAstartup successfull \n");
-	}
+	    std::mutex mut;
 	
-
-	//define the address
-	server_address.sin_family = AF_INET;
-	server_address.sin_port = htons(9002);
-	server_address.sin_addr.s_addr = inet_addr("127.0.0.1"); // connects to any IP address used by the computer
-
-	//creating the socket
-	server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (server_socket == INVALID_SOCKET)
-	{
-		printf("server socket creation failed \n");
-	}
-	else
-	{
-		printf("server socket creation successfull \n");
-	}
-	
-
-	//bind
-	iBind = bind(server_socket, (struct sockaddr*)&server_address, sizeof(server_address));
-	if (iBind == SOCKET_ERROR)
-	{
-		printf("binding failed \n");
-	}
-	else
-	{
-		printf("binding successfull \n");
-	}
-	
-
-	//listen
-	iListen = listen(server_socket, 2);
-	if (iListen == SOCKET_ERROR)
-	{
-		printf("listening failed \n");
-	}
-	else
-	{
-		printf("listening successfull \n");
-	}
-	
-
-	//accept
-	client_socket = accept(server_socket, (SOCKADDR*)&client_address, &iClient_address);
-	if (client_socket == INVALID_SOCKET)
-	{
-		printf("accepting failed \n");
-	}
-	else
-	{
-		printf("accepting successfull \n");
-	}
-	
-
-	//send
-	iSend = send(client_socket, server_response, iServer_response, 0);
-	if (iSend == SOCKET_ERROR)
-	{
-		printf("sending failed \n");
-	}
-	else
-	{
-		printf("sending successfull \n");
-	}
-	
-
-	//recv
-	iRecv = recv(client_socket, RecvBuffer, iRecvBuffer, 0);
-	if (iRecv == SOCKET_ERROR)
-	{
-		printf("recieving failed \n");
-	}
-	else
-	{
-		printf("recieving successfull \n");
-	}
-	
-
-	//close
-	iCloseSocket = closesocket(server_socket);
-	if (iCloseSocket == SOCKET_ERROR)
-	{
-		printf("closing failed \n");
-	}
-	else
-	{
-		printf("closing successfull \n");
-	}
-	
-
-	//WSAcleanup
-	iWsaCleanup = WSACleanup();
-	if (iWsaCleanup == SOCKET_ERROR)
-	{
-		printf("cleenup failed \n");
-	}
-	else
-	{
-		printf("cleanup successfull \n");
-	}
-	
-
-	return 0;
+		char RecvBuffer[256];
+		mut.lock();
+		while (true)
+		{
+			//recv
+			if (recv(client_socket, RecvBuffer, strlen(RecvBuffer) + 1, 0) == SOCKET_ERROR)
+			{
+				
+			}
+			else
+			{
+				//send
+				for (int i = 0;i < numofclients;i++)
+				{
+					//if(client_arr[i]!=client_socket)
+						send(client_arr[i], RecvBuffer, strlen(RecvBuffer) + 1, 0);
+				}
+			}
+		}
+		mut.unlock();
 }
 
+	int main()
+	{
+		WSADATA Winsockdata;
+		SOCKET server_socket;
+		struct sockaddr_in server_address;
 
+		SOCKET client_arr[5];
+		struct sockaddr_in client_addresses[5];
+		std::thread client_threads[5];
+		int numOfClients=0;
+
+		//WSAstartup
+		if (WSAStartup(MAKEWORD(2, 2), &Winsockdata) != 0)
+			printf("WSAstartup failed");
+		else
+			printf("WSAstartup successful");
+
+		//define the address
+		server_address.sin_family = AF_INET;
+		server_address.sin_port = htons(9002);
+		server_address.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+		//creating the socket
+		server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+		if (server_socket == INVALID_SOCKET)
+		{
+			printf("server socket creation failed \n");
+		}
+		else
+		{
+			printf("server socket creation successfull \n");
+		}
+
+		//bind
+		if (bind(server_socket, (struct sockaddr*)&server_address, sizeof(server_address)) == SOCKET_ERROR)
+		{
+			printf("binding failed \n");
+		}
+		else
+		{
+			printf("binding successfull \n");
+		}
+
+		//listen
+		if (listen(server_socket, 5) == SOCKET_ERROR)
+			printf("listening failed \n");
+		else
+			printf("listening successfull \n");
+		int result;
+		u_long mode;
+		
+		while (true)
+		{
+			if (numOfClients!=0)
+			{
+				mode = 1;
+				result = ioctlsocket(server_socket, FIONBIO, &mode);//sets the socket as non blocking
+			}
+			
+			//accept
+			int iclient_addr = sizeof(client_addresses[numOfClients]);
+			client_arr[numOfClients] = accept(server_socket, (SOCKADDR*)&client_addresses[numOfClients], &iclient_addr);
+			mode = 1;
+			result = ioctlsocket(server_socket, FIONBIO, &mode);//sets the socket as non blocking
+			if (client_arr[numOfClients] == EWOULDBLOCK)
+			{
+				client_arr[numOfClients] == NULL;	
+			}
+			else
+			{
+				numOfClients++;
+				client_threads[numOfClients-1] = thread(RecvAndSend, client_arr[numOfClients-1], client_arr, numOfClients);
+			}
+			
+			for (int i = 0;i < numOfClients;i++)
+			{
+				client_threads[i].join();
+			}
+			
+		}
+
+		//close
+		if (closesocket(server_socket) == SOCKET_ERROR)
+		{
+			printf("closing failed \n");
+		}
+		else
+		{
+			printf("closing successfull \n");
+		}
+
+		//WSAcleanup
+		if (WSACleanup() == SOCKET_ERROR)
+		{
+			printf("cleenup failed \n");
+		}
+		else
+		{
+			printf("cleanup successfull \n");
+		}
+
+
+		return 0;
+	}
+	
