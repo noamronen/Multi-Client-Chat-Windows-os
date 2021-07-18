@@ -5,12 +5,31 @@
 #include <winsock2.h>
 #pragma warning(disable:4996) 
 #include <iostream>
+#include <thread>
+#include <string>
+using namespace std;
+
+void Send(SOCKET client_socket,char message[256])
+{
+	if (send(client_socket, message, strlen(message) + 1, 0) == SOCKET_ERROR)
+	{
+		printf("sending failed \n");
+	}
+	else
+	{
+		printf("sending successfull \n");
+	}
+
+}
+
 int main()
 {
 	//local variable
 	WSADATA Winsockdata;
 	int iWsaStartup;
 	int iWsaCleanup;
+	int result;
+	u_long mode;
 
 	//for creating the socket
 	SOCKET client_socket;
@@ -24,8 +43,6 @@ int main()
 	char RecvBuffer[256];
 	int iRecvBuffer = strlen(RecvBuffer) + 1;
 
-
-	
 	//WSAstartup
 	iWsaStartup = WSAStartup(MAKEWORD(2, 2), &Winsockdata);
 	if (iWsaStartup != 0)
@@ -36,7 +53,6 @@ int main()
 	{
 		printf("WSAstartup successfull \n");
 	}
-	
 
 	//creating the socket
 	client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -48,7 +64,7 @@ int main()
 	{
 		printf("client socket creation successfull \n");
 	}
-	
+
 	//define the address
 	server_address.sin_family = AF_INET;
 	server_address.sin_port = htons(9002);
@@ -64,19 +80,42 @@ int main()
 		printf("connecting successfull \n");
 	}
 	
+	while (1)
+	{
+		char RecvBuffer[256];
+		char message[256];
 
-	//recv
-	iRecv = recv(client_socket, RecvBuffer, iRecvBuffer, 0);
-	if (iRecv == SOCKET_ERROR)
-	{
-		printf("recieving failed \n");
+		mode = 1;
+		result = ioctlsocket(client_socket, FIONBIO, &mode);//sets the socket as non blocking
+
+		//recv
+		
+		if (recv(client_socket, RecvBuffer, strlen(RecvBuffer) + 1, 0) == SOCKET_ERROR)
+		{
+
+			//mode = 0;
+			//result = ioctlsocket(client_socket, FIONBIO, &mode);//sets the socket as blocking
+
+			cout << "enter text: \n";
+			if (cin.getline(RecvBuffer, 256) && RecvBuffer != "")
+			{
+				if (strcmp(RecvBuffer, "break") == 0)
+					break;
+				strcpy(message, RecvBuffer);
+				std::thread send_thread = thread(Send, client_socket, message);
+				send_thread.join();
+
+			}
+		}
+		else
+		{
+			printf("server: %s \n", RecvBuffer);
+
+		}
+
+
+
 	}
-	else
-	{
-		printf("recieving successfull \n");
-	}
-	printf("%s", RecvBuffer);
-	
 
 	//close
 	iCloseSocket = closesocket(client_socket);
@@ -101,18 +140,12 @@ int main()
 		printf("cleanup successfull \n");
 	}
 	
-
+	
+	
 
 
 	return 0;
 }
-
-
-
-
-
-
-
 
 
 
