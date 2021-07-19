@@ -9,17 +9,31 @@
 #include <string>
 using namespace std;
 
-void Send(SOCKET client_socket,char message[256])
+void Send(SOCKET client_socket)
 {
-	if (send(client_socket, message, strlen(message) + 1, 0) == SOCKET_ERROR)
+	char Message[256];
+	while (true)
 	{
-		printf("sending failed \n");
-	}
-	else
-	{
-		printf("sending successfull \n");
-	}
+		cout << "enter text: \n";
+		cin.getline(Message, 256);
+		if (strcmp(Message, "break") == 0)
+			break;
+		send(client_socket, Message, strlen(Message) + 1, 0);
+		
+		
 
+	}
+}
+
+void recieve(SOCKET client_socket)
+{
+	char RecvBuffer[256];
+	while (true)
+	{	
+		recv(client_socket, RecvBuffer, strlen(RecvBuffer) + 1, 0);
+		printf("server: %s \n", RecvBuffer);
+		
+	}
 }
 
 int main()
@@ -28,8 +42,7 @@ int main()
 	WSADATA Winsockdata;
 	int iWsaStartup;
 	int iWsaCleanup;
-	int result;
-	u_long mode;
+	
 
 	//for creating the socket
 	SOCKET client_socket;
@@ -79,42 +92,13 @@ int main()
 	{
 		printf("connecting successfull \n");
 	}
-	
+
 	while (1)
 	{
-		char RecvBuffer[256];
-		char message[256];
-
-		mode = 1;
-		result = ioctlsocket(client_socket, FIONBIO, &mode);//sets the socket as non blocking
-
-		//recv
-		
-		if (recv(client_socket, RecvBuffer, strlen(RecvBuffer) + 1, 0) == SOCKET_ERROR)
-		{
-
-			//mode = 0;
-			//result = ioctlsocket(client_socket, FIONBIO, &mode);//sets the socket as blocking
-
-			cout << "enter text: \n";
-			if (cin.getline(RecvBuffer, 256) && RecvBuffer != "")
-			{
-				if (strcmp(RecvBuffer, "break") == 0)
-					break;
-				strcpy(message, RecvBuffer);
-				std::thread send_thread = thread(Send, client_socket, message);
-				send_thread.join();
-
-			}
-		}
-		else
-		{
-			printf("server: %s \n", RecvBuffer);
-
-		}
-
-
-
+		std::thread sending_thread = thread(Send, client_socket);
+		std::thread recieving_thread = thread(recieve, client_socket);
+		sending_thread.join();
+		recieving_thread.join();
 	}
 
 	//close
@@ -127,8 +111,8 @@ int main()
 	{
 		printf("closing successfull \n");
 	}
-	
-	
+
+
 	//WSAcleanup
 	iWsaCleanup = WSACleanup();
 	if (iWsaCleanup == SOCKET_ERROR)
@@ -139,46 +123,12 @@ int main()
 	{
 		printf("cleanup successfull \n");
 	}
-	
-	
-	
+
+
+
 
 
 	return 0;
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
