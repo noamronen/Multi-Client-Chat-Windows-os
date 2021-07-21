@@ -51,12 +51,12 @@ server::server()
 
 void server::recieve(SOCKET client_socket)
 {
-	char RecvBuffer[256];
-	ZeroMemory(RecvBuffer, 256);
+	char RecvBuffer[1024];
+	ZeroMemory(RecvBuffer, 1024);
 	while (true)
 	{
 		
-		if (recv(client_socket, RecvBuffer, 256, 0) != SOCKET_ERROR)
+		if (recv(client_socket, RecvBuffer, 1024, 0) != SOCKET_ERROR)
 		{
 			
 			broadcast(client_socket, RecvBuffer);
@@ -67,11 +67,12 @@ void server::recieve(SOCKET client_socket)
 	}
 }
 
-void server::broadcast(SOCKET client_socket, char buffer[256])
+void server::broadcast(SOCKET client_socket, char buffer[1024])
 {
 	for (auto i : clients_vec)
 	{
-		send(i, buffer, strlen(buffer)+1, 0);
+		if(i!=client_socket)
+			send(i, buffer, strlen(buffer)+1, 0);
 	}
 }
 
